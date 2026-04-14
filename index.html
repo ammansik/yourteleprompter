@@ -106,38 +106,29 @@
       margin-top: 16px;
     }
 
-    .remote-box {
-      margin-top: 16px;
+    .remote-floating {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 30;
+      width: min(280px, calc(100vw - 32px));
       border: 1px solid #1f2937;
       border-radius: 14px;
       padding: 12px 14px;
       background: #020617;
       display: grid;
-      gap: 10px;
+      gap: 8px;
     }
 
-    .remote-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+    .remote-label {
+      font-size: 13px;
+      color: #93c5fd;
+      font-weight: 700;
     }
 
     .remote-status {
       font-size: 13px;
       color: #cbd5e1;
-    }
-
-    .remote-code {
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      color: #93c5fd;
-    }
-
-    .remote-link {
-      color: #93c5fd;
-      word-break: break-all;
-      font-size: 13px;
     }
 
     button {
@@ -314,16 +305,6 @@
         <button id="fullscreenBtn" class="secondary" aria-label="Fullscreen">Fullscreen</button>
       </div>
 
-      <div class="remote-box">
-        <strong>Phone Remote</strong>
-        <div class="remote-status" id="remoteStatus">Remote: starting…</div>
-        <div class="remote-row">
-          <span>Session:</span>
-          <span id="remoteCode" class="remote-code">--</span>
-          <button id="copyRemoteBtn" class="secondary" aria-label="Copy remote link">Copy link</button>
-        </div>
-        <a id="remoteLink" class="remote-link" href="#" target="_blank" rel="noopener">Preparing remote link…</a>
-      </div>
     </div>
 
     <div class="viewer">
@@ -338,6 +319,11 @@ This teleprompter scrolls vertically. Adjust the speed and font size, then press
 You can paste directly into this area and edit it in place.</div>
       </div>
     </div>
+  </div>
+  <div class="remote-floating">
+    <div class="remote-label">Control by phone</div>
+    <div class="remote-status" id="remoteStatus">Starting remote…</div>
+    <button id="copyRemoteBtn" class="secondary" aria-label="Copy remote link">Copy link</button>
   </div>
 
   <script>
@@ -354,8 +340,6 @@ You can paste directly into this area and edit it in place.</div>
     const viewport = document.getElementById('viewport');
     const content = document.getElementById('content');
     const remoteStatus = document.getElementById('remoteStatus');
-    const remoteCode = document.getElementById('remoteCode');
-    const remoteLink = document.getElementById('remoteLink');
     const copyRemoteBtn = document.getElementById('copyRemoteBtn');
 
     let isPlaying = false;
@@ -534,9 +518,6 @@ You can paste directly into this area and edit it in place.</div>
     function initRemoteHost() {
       if (!window.Peer) {
         updateRemoteStatus('Remote unavailable: PeerJS failed to load.');
-        remoteCode.textContent = 'N/A';
-        remoteLink.textContent = 'Remote unavailable';
-        remoteLink.removeAttribute('href');
         return;
       }
 
@@ -544,10 +525,7 @@ You can paste directly into this area and edit it in place.</div>
       hostPeer.on('open', (id) => {
         sessionToken = generateSessionToken();
         currentRemoteUrl = composeRemoteUrl(id, sessionToken);
-        remoteCode.textContent = id;
-        remoteLink.href = currentRemoteUrl;
-        remoteLink.textContent = currentRemoteUrl;
-        updateRemoteStatus('Remote ready. Open this link on your phone.');
+        updateRemoteStatus('Remote ready. Tap Copy link and open it on your phone.');
       });
 
       hostPeer.on('connection', (conn) => {
