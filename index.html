@@ -16,6 +16,7 @@
   <meta name="twitter:title" content="Your Teleprompter | Free Online Teleprompter" />
   <meta name="twitter:description" content="Free browser-based teleprompter with speed controls, mirror mode, and fullscreen playback." />
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -103,6 +104,31 @@
       grid-template-columns: repeat(4, minmax(120px, 1fr));
       gap: 10px;
       margin-top: 16px;
+    }
+
+    .remote-floating {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 30;
+      width: min(280px, calc(100vw - 32px));
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: #020617;
+      display: grid;
+      gap: 8px;
+    }
+
+    .remote-label {
+      font-size: 13px;
+      color: #93c5fd;
+      font-weight: 700;
+    }
+
+    .remote-status {
+      font-size: 13px;
+      color: #cbd5e1;
     }
 
     button {
@@ -278,6 +304,7 @@
         <button id="mirrorBtn" class="secondary" aria-label="Mirror">Mirror</button>
         <button id="fullscreenBtn" class="secondary" aria-label="Fullscreen">Fullscreen</button>
       </div>
+
     </div>
 
     <div class="viewer">
@@ -293,6 +320,11 @@ You can paste directly into this area and edit it in place.</div>
       </div>
     </div>
   </div>
+  <div class="remote-floating">
+    <div class="remote-label">Control by phone</div>
+    <div class="remote-status" id="remoteStatus">Starting remote…</div>
+    <button id="copyRemoteBtn" class="secondary" aria-label="Copy remote link">Copy link</button>
+  </div>
 
   <script>
     const speedInput = document.getElementById('speedInput');
@@ -307,10 +339,17 @@ You can paste directly into this area and edit it in place.</div>
     const fontSizeValue = document.getElementById('fontSizeValue');
     const viewport = document.getElementById('viewport');
     const content = document.getElementById('content');
+    const remoteStatus = document.getElementById('remoteStatus');
+    const copyRemoteBtn = document.getElementById('copyRemoteBtn');
 
     let isPlaying = false;
     let animationFrame = null;
     let lastTimestamp = null;
+    let hostPeer = null;
+    let remoteConnections = 0;
+    let currentRemoteUrl = '';
+    let sessionToken = '';
+    const commandHistory = new Map();
 
     function placeCursorAtStart() {
       const selection = window.getSelection();
@@ -418,6 +457,94 @@ You can paste directly into this area and edit it in place.</div>
       focusBtn.textContent = 'Editing';
     }
 
+    function generateSessionToken() {
+      const bytes = new Uint8Array(12);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+    }
+
+    function composeRemoteUrl(peerId, token) {
+      const url = new URL(window.location.href);
+      url.pathname = '/remote.html';
+      url.search = '?session=' + encodeURIComponent(peerId) + '&token=' + encodeURIComponent(token);
+      url.hash = '';
+      return url.toString();
+    }
+
+    function updateRemoteStatus(message) {
+      remoteStatus.textContent = message;
+    }
+
+    function allowCommand(conn, action) {
+      const key = conn && conn.peer ? conn.peer : 'anonymous';
+      const now = Date.now();
+      const lastTimestamp = commandHistory.get(key) || 0;
+      const minIntervalMs = action === 'set_speed' || action === 'set_font_size' ? 50 : 120;
+      if (now - lastTimestamp < minIntervalMs) return false;
+      commandHistory.set(key, now);
+      return true;
+    }
+
+    function handleRemoteCommand(payload, conn) {
+      if (!payload || typeof payload !== 'object') return;
+      const action = payload.action;
+      if (payload.token !== sessionToken) return;
+      if (!allowCommand(conn, action)) return;
+
+      if (action === 'play_toggle') {
+        togglePlayback();
+      } else if (action === 'stop') {
+        resetScroll();
+      } else if (action === 'set_speed') {
+        const nextValue = Number(payload.value);
+        if (!Number.isFinite(nextValue)) return;
+        const bounded = Math.min(200, Math.max(10, nextValue));
+        speedInput.value = String(bounded);
+        updateSpeed();
+      } else if (action === 'set_font_size') {
+        const nextValue = Number(payload.value);
+        if (!Number.isFinite(nextValue)) return;
+        const bounded = Math.min(120, Math.max(24, nextValue));
+        fontSizeInput.value = String(bounded);
+        updateFontSize();
+      } else if (action === 'toggle_mirror') {
+        mirrorInput.checked = !mirrorInput.checked;
+        updateMirror();
+      } else if (action === 'focus_editor') {
+        focusEditor();
+      }
+    }
+
+    function initRemoteHost() {
+      if (!window.Peer) {
+        updateRemoteStatus('Remote unavailable: PeerJS failed to load.');
+        return;
+      }
+
+      hostPeer = new Peer();
+      hostPeer.on('open', (id) => {
+        sessionToken = generateSessionToken();
+        currentRemoteUrl = composeRemoteUrl(id, sessionToken);
+        updateRemoteStatus('Remote ready. Tap Copy link and open it on your phone.');
+      });
+
+      hostPeer.on('connection', (conn) => {
+        remoteConnections += 1;
+        updateRemoteStatus('Remote connected (' + remoteConnections + ').');
+        conn.on('data', (payload) => handleRemoteCommand(payload, conn));
+        conn.on('close', () => {
+          remoteConnections = Math.max(0, remoteConnections - 1);
+          commandHistory.delete(conn.peer);
+          updateRemoteStatus(remoteConnections > 0 ? 'Remote connected (' + remoteConnections + ').' : 'Remote ready. Waiting for phone.');
+        });
+      });
+
+      hostPeer.on('error', (error) => {
+        console.error('Peer error:', error);
+        updateRemoteStatus('Remote error: ' + error.type);
+      });
+    }
+
     content.addEventListener('paste', (event) => {
       event.preventDefault();
       const pastedText = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
@@ -454,6 +581,16 @@ You can paste directly into this area and edit it in place.</div>
     });
     fullscreenBtn.addEventListener('click', toggleFullscreen);
     focusBtn.addEventListener('click', focusEditor);
+    copyRemoteBtn.addEventListener('click', async () => {
+      if (!currentRemoteUrl) return;
+      try {
+        await navigator.clipboard.writeText(currentRemoteUrl);
+        updateRemoteStatus('Remote link copied. Open it on your phone.');
+      } catch (error) {
+        console.error('Clipboard failed:', error);
+        updateRemoteStatus('Could not copy link. Use the link shown below.');
+      }
+    });
 
     document.addEventListener('fullscreenchange', () => {
       fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
@@ -464,7 +601,7 @@ You can paste directly into this area and edit it in place.</div>
     updateMirror();
     viewport.scrollTop = 0;
     focusEditorAtStart();
+    initRemoteHost();
   </script>
 </body>
 </html>
-

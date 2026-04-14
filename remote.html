@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teleprompter Remote</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #020617;
+      color: #e2e8f0;
+      padding: 18px;
+    }
+
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      background: #111827;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .status {
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+
+    .session {
+      font-size: 13px;
+      color: #93c5fd;
+      word-break: break-all;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 16px 14px;
+      font-size: 18px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #334155;
+    }
+
+    label {
+      font-size: 14px;
+      color: #cbd5e1;
+      display: grid;
+      gap: 7px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <strong>Phone Remote</strong>
+      <div id="status" class="status">Connecting…</div>
+      <div id="sessionText" class="session"></div>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <button id="playPauseBtn">Play / Pause</button>
+        <button id="stopBtn" class="secondary">Stop</button>
+        <button id="mirrorBtn" class="secondary">Mirror</button>
+        <button id="focusBtn" class="secondary">Focus</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>
+        Speed
+        <input id="speedInput" type="range" min="10" max="200" value="36" />
+      </label>
+      <label>
+        Font size
+        <input id="fontSizeInput" type="range" min="24" max="120" value="78" />
+      </label>
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const sessionText = document.getElementById('sessionText');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const mirrorBtn = document.getElementById('mirrorBtn');
+    const focusBtn = document.getElementById('focusBtn');
+    const speedInput = document.getElementById('speedInput');
+    const fontSizeInput = document.getElementById('fontSizeInput');
+
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session');
+    const sessionToken = params.get('token');
+    sessionText.textContent = sessionId ? 'Session: ' + sessionId : 'Missing session in URL.';
+
+    let remotePeer = null;
+    let conn = null;
+    let reconnectTimer = null;
+    let reconnectDelayMs = 1000;
+    let lastSliderSendAt = 0;
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function send(action, value) {
+      if (!conn || !conn.open) return;
+      conn.send({ action, value, token: sessionToken });
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer) return;
+      setStatus('Disconnected. Reconnecting…');
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        reconnectDelayMs = Math.min(reconnectDelayMs * 2, 8000);
+        connect();
+      }, reconnectDelayMs);
+    }
+
+    function safeClosePeer() {
+      if (conn) {
+        conn.close();
+      }
+      if (remotePeer) {
+        remotePeer.destroy();
+      }
+      conn = null;
+      remotePeer = null;
+    }
+
+    function connect() {
+      if (!sessionId || !sessionToken) {
+        setStatus('Cannot connect: session or token is missing.');
+        return;
+      }
+
+      if (!window.Peer) {
+        setStatus('Cannot connect: PeerJS failed to load.');
+        return;
+      }
+
+      remotePeer = new Peer();
+      remotePeer.on('open', () => {
+        conn = remotePeer.connect(sessionId, { reliable: true });
+        conn.on('open', () => {
+          reconnectDelayMs = 1000;
+          setStatus('Connected');
+        });
+        conn.on('close', () => {
+          safeClosePeer();
+          scheduleReconnect();
+        });
+        conn.on('error', () => {
+          safeClosePeer();
+          scheduleReconnect();
+        });
+      });
+      remotePeer.on('error', () => {
+        safeClosePeer();
+        scheduleReconnect();
+      });
+    }
+
+    playPauseBtn.addEventListener('click', () => send('play_toggle'));
+    stopBtn.addEventListener('click', () => send('stop'));
+    mirrorBtn.addEventListener('click', () => send('toggle_mirror'));
+    focusBtn.addEventListener('click', () => send('focus_editor'));
+    speedInput.addEventListener('input', () => {
+      const now = Date.now();
+      if (now - lastSliderSendAt < 70) return;
+      lastSliderSendAt = now;
+      send('set_speed', Number(speedInput.value));
+    });
+    fontSizeInput.addEventListener('input', () => {
+      const now = Date.now();
+      if (now - lastSliderSendAt < 70) return;
+      lastSliderSendAt = now;
+      send('set_font_size', Number(fontSizeInput.value));
+    });
+
+    connect();
+  </script>
+</body>
+</html>
