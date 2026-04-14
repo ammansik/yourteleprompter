@@ -364,6 +364,8 @@ You can paste directly into this area and edit it in place.</div>
     let hostPeer = null;
     let remoteConnections = 0;
     let currentRemoteUrl = '';
+    let sessionToken = '';
+    const commandHistory = new Map();
 
     function placeCursorAtStart() {
       const selection = window.getSelection();
@@ -471,10 +473,16 @@ You can paste directly into this area and edit it in place.</div>
       focusBtn.textContent = 'Editing';
     }
 
-    function composeRemoteUrl(peerId) {
+    function generateSessionToken() {
+      const bytes = new Uint8Array(12);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+    }
+
+    function composeRemoteUrl(peerId, token) {
       const url = new URL(window.location.href);
       url.pathname = '/remote.html';
-      url.search = '?session=' + encodeURIComponent(peerId);
+      url.search = '?session=' + encodeURIComponent(peerId) + '&token=' + encodeURIComponent(token);
       url.hash = '';
       return url.toString();
     }
@@ -483,9 +491,21 @@ You can paste directly into this area and edit it in place.</div>
       remoteStatus.textContent = message;
     }
 
-    function handleRemoteCommand(payload) {
+    function allowCommand(conn, action) {
+      const key = conn && conn.peer ? conn.peer : 'anonymous';
+      const now = Date.now();
+      const lastTimestamp = commandHistory.get(key) || 0;
+      const minIntervalMs = action === 'set_speed' || action === 'set_font_size' ? 50 : 120;
+      if (now - lastTimestamp < minIntervalMs) return false;
+      commandHistory.set(key, now);
+      return true;
+    }
+
+    function handleRemoteCommand(payload, conn) {
       if (!payload || typeof payload !== 'object') return;
       const action = payload.action;
+      if (payload.token !== sessionToken) return;
+      if (!allowCommand(conn, action)) return;
 
       if (action === 'play_toggle') {
         togglePlayback();
@@ -522,7 +542,8 @@ You can paste directly into this area and edit it in place.</div>
 
       hostPeer = new Peer();
       hostPeer.on('open', (id) => {
-        currentRemoteUrl = composeRemoteUrl(id);
+        sessionToken = generateSessionToken();
+        currentRemoteUrl = composeRemoteUrl(id, sessionToken);
         remoteCode.textContent = id;
         remoteLink.href = currentRemoteUrl;
         remoteLink.textContent = currentRemoteUrl;
@@ -532,9 +553,10 @@ You can paste directly into this area and edit it in place.</div>
       hostPeer.on('connection', (conn) => {
         remoteConnections += 1;
         updateRemoteStatus('Remote connected (' + remoteConnections + ').');
-        conn.on('data', handleRemoteCommand);
+        conn.on('data', (payload) => handleRemoteCommand(payload, conn));
         conn.on('close', () => {
           remoteConnections = Math.max(0, remoteConnections - 1);
+          commandHistory.delete(conn.peer);
           updateRemoteStatus(remoteConnections > 0 ? 'Remote connected (' + remoteConnections + ').' : 'Remote ready. Waiting for phone.');
         });
       });

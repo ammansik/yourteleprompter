@@ -114,10 +114,14 @@
 
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session');
+    const sessionToken = params.get('token');
     sessionText.textContent = sessionId ? 'Session: ' + sessionId : 'Missing session in URL.';
 
     let remotePeer = null;
     let conn = null;
+    let reconnectTimer = null;
+    let reconnectDelayMs = 1000;
+    let lastSliderSendAt = 0;
 
     function setStatus(message) {
       statusEl.textContent = message;
@@ -125,12 +129,33 @@
 
     function send(action, value) {
       if (!conn || !conn.open) return;
-      conn.send({ action, value });
+      conn.send({ action, value, token: sessionToken });
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer) return;
+      setStatus('Disconnected. Reconnecting…');
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        reconnectDelayMs = Math.min(reconnectDelayMs * 2, 8000);
+        connect();
+      }, reconnectDelayMs);
+    }
+
+    function safeClosePeer() {
+      if (conn) {
+        conn.close();
+      }
+      if (remotePeer) {
+        remotePeer.destroy();
+      }
+      conn = null;
+      remotePeer = null;
     }
 
     function connect() {
-      if (!sessionId) {
-        setStatus('Cannot connect: session is missing.');
+      if (!sessionId || !sessionToken) {
+        setStatus('Cannot connect: session or token is missing.');
         return;
       }
 
@@ -142,19 +167,41 @@
       remotePeer = new Peer();
       remotePeer.on('open', () => {
         conn = remotePeer.connect(sessionId, { reliable: true });
-        conn.on('open', () => setStatus('Connected'));
-        conn.on('close', () => setStatus('Disconnected'));
-        conn.on('error', () => setStatus('Connection error'));
+        conn.on('open', () => {
+          reconnectDelayMs = 1000;
+          setStatus('Connected');
+        });
+        conn.on('close', () => {
+          safeClosePeer();
+          scheduleReconnect();
+        });
+        conn.on('error', () => {
+          safeClosePeer();
+          scheduleReconnect();
+        });
       });
-      remotePeer.on('error', () => setStatus('Peer error'));
+      remotePeer.on('error', () => {
+        safeClosePeer();
+        scheduleReconnect();
+      });
     }
 
     playPauseBtn.addEventListener('click', () => send('play_toggle'));
     stopBtn.addEventListener('click', () => send('stop'));
     mirrorBtn.addEventListener('click', () => send('toggle_mirror'));
     focusBtn.addEventListener('click', () => send('focus_editor'));
-    speedInput.addEventListener('input', () => send('set_speed', Number(speedInput.value)));
-    fontSizeInput.addEventListener('input', () => send('set_font_size', Number(fontSizeInput.value)));
+    speedInput.addEventListener('input', () => {
+      const now = Date.now();
+      if (now - lastSliderSendAt < 70) return;
+      lastSliderSendAt = now;
+      send('set_speed', Number(speedInput.value));
+    });
+    fontSizeInput.addEventListener('input', () => {
+      const now = Date.now();
+      if (now - lastSliderSendAt < 70) return;
+      lastSliderSendAt = now;
+      send('set_font_size', Number(fontSizeInput.value));
+    });
 
     connect();
   </script>
