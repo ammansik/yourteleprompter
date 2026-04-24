@@ -5,16 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Your Teleprompter | Free Online Teleprompter for Creators</title>
   <meta name="description" content="Your Teleprompter is a free online teleprompter for video creators, presenters, and live streamers. Adjust speed, font size, mirroring, and fullscreen instantly." />
-  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <meta name="keywords" content="teleprompter, online teleprompter, free teleprompter, teleprompter app, script scrolling" />
+  <meta name="author" content="Your Teleprompter" />
+  <meta name="theme-color" content="#0f172a" />
   <link rel="canonical" href="https://yourteleprompter.com/" />
+  <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLMs and AI overview" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Your Teleprompter | Free Online Teleprompter" />
   <meta property="og:description" content="A free online teleprompter with adjustable speed, font size, mirror mode, and fullscreen for creators and presenters." />
   <meta property="og:url" content="https://yourteleprompter.com/" />
   <meta property="og:site_name" content="Your Teleprompter" />
+  <meta property="og:image" content="https://yourteleprompter.com/og-image.png" />
+  <meta property="og:image:alt" content="Your Teleprompter interface showing script and controls" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Your Teleprompter | Free Online Teleprompter" />
   <meta name="twitter:description" content="Free browser-based teleprompter with speed controls, mirror mode, and fullscreen playback." />
+  <meta name="twitter:image" content="https://yourteleprompter.com/og-image.png" />
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
@@ -47,6 +54,41 @@
 
     .panel {
       padding: 18px 20px;
+    }
+
+    .info-panel {
+      padding: 22px;
+      line-height: 1.6;
+    }
+
+    .info-panel h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .info-panel h3 {
+      margin-bottom: 6px;
+      font-size: 18px;
+    }
+
+    .info-panel p,
+    .info-panel li {
+      color: #cbd5e1;
+    }
+
+    .info-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 14px;
+    }
+
+    .info-card {
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 14px;
+      background: #020617;
     }
 
     h1 {
@@ -250,18 +292,68 @@
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Your Teleprompter",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "url": "https://yourteleprompter.com/",
-      "description": "Free online teleprompter for creators and presenters with adjustable speed, font size, mirror mode, and fullscreen.",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "inLanguage": "en-US"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://yourteleprompter.com/#website",
+          "url": "https://yourteleprompter.com/",
+          "name": "Your Teleprompter",
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://yourteleprompter.com/#app",
+          "name": "Your Teleprompter",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://yourteleprompter.com/",
+          "description": "Free online teleprompter for creators and presenters with adjustable speed, font size, mirror mode, and fullscreen.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Editable script area",
+            "Adjustable scroll speed",
+            "Adjustable font size",
+            "Mirror mode for teleprompter glass",
+            "Fullscreen playback",
+            "Phone remote control"
+          ],
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://yourteleprompter.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is Your Teleprompter free to use?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Your Teleprompter is free to use in your browser with no sign-up required."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I use this teleprompter on a phone or tablet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. You can run the main teleprompter on desktop or mobile, and optionally control playback from a phone with the remote link."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this teleprompter support mirror mode?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Mirror mode flips the script horizontally for reflective teleprompter glass setups."
+              }
+            }
+          ]
+        }
+      ]
     }
   </script>
 </head>
@@ -320,6 +412,37 @@ You can paste directly into this area and edit it in place.</div>
       </div>
     </div>
   </div>
+
+    <section class="panel info-panel" id="how-to-use">
+      <h2>Online Teleprompter for Video Recording, Presentations, and Live Streaming</h2>
+      <p>Your Teleprompter is a browser-based teleprompter app that helps creators, teachers, founders, sales teams, and presenters deliver scripts smoothly. Paste your script, set your scroll speed, choose your font size, and start reading without losing your place.</p>
+      <div class="info-grid">
+        <article class="info-card">
+          <h3>How to use this teleprompter</h3>
+          <ol>
+            <li>Paste or type your script in the editor.</li>
+            <li>Adjust speed and text size until reading feels natural.</li>
+            <li>Enable mirror mode if you use teleprompter beam-splitter glass.</li>
+            <li>Press Play and read at eye level while recording.</li>
+          </ol>
+        </article>
+        <article class="info-card">
+          <h3>Who this is for</h3>
+          <ul>
+            <li>YouTube creators and podcasters</li>
+            <li>Course creators and webinar hosts</li>
+            <li>Startup demos and product marketing videos</li>
+            <li>Interview prep, keynote practice, and livestreams</li>
+          </ul>
+        </article>
+        <article class="info-card" id="faq">
+          <h3>Frequently asked questions</h3>
+          <p><strong>Is it free?</strong> Yes, the teleprompter is free and works directly in the browser.</p>
+          <p><strong>Do I need an account?</strong> No sign-up is required.</p>
+          <p><strong>Can I control it from my phone?</strong> Yes. Use the generated remote link to control playback and settings.</p>
+        </article>
+      </div>
+    </section>
   <div class="remote-floating">
     <div class="remote-label">Control by phone</div>
     <div class="remote-status" id="remoteStatus">Starting remote…</div>
