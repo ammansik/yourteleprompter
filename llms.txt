@@ -1,0 +1,21 @@
+# Your Teleprompter
+
+Your Teleprompter is a free web-based teleprompter at https://yourteleprompter.com/.
+
+## What it does
+- Scrolls scripts vertically while recording.
+- Lets users adjust speed and font size.
+- Supports mirror mode for teleprompter glass.
+- Supports fullscreen playback.
+- Provides phone remote controls via a secure session link.
+
+## Audience
+- Video creators
+- Presenters and webinar hosts
+- Interview and speech practice
+
+## Pricing
+- Free
+
+## Primary URL
+- https://yourteleprompter.com/
