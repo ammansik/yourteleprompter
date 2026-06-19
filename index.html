@@ -693,6 +693,12 @@ You can paste directly into this area and edit it in place.</div>
       });
     });
 
+    viewport.addEventListener('mousedown', () => {
+      if (isPlaying) {
+        stopPlayback();
+      }
+    });
+
     content.addEventListener('focus', () => {
       if (!isPlaying) focusBtn.textContent = 'Editing';
     });
