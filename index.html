@@ -551,6 +551,10 @@ You can paste directly into this area and edit it in place.</div>
       playPauseBtn.innerHTML = isPlaying ? '&#10074;&#10074;' : '&#9654;';
 
       if (isPlaying) {
+        const maxScroll = content.scrollHeight - viewport.clientHeight;
+        if (viewport.scrollTop >= maxScroll) {
+          viewport.scrollTop = 0;
+        }
         content.blur();
         content.setAttribute('contenteditable', 'false');
         focusBtn.textContent = 'Locked';
